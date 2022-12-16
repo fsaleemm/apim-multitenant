@@ -15,7 +15,7 @@ The components used to illustrate this solution are:
 
 ## Demo Diagram
 
-![Conceptual View](/media/s1.PNG)
+![Conceptual View](/media/s1.png)
 
 In the above diagram the request flow is as follows:
 1. A request from a specific tenant (Tenant 1) is received by APIM
@@ -120,7 +120,7 @@ az deployment sub create --name "<unique deployment name>" --location "<Your Cho
 
 The following deployments will run:
 
-![deployment times](media/s2.PNG)
+![deployment times](media/s2.png)
 
 >**NOTE**: The APIM deployment can take over an hour to complete.
 
