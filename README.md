@@ -1,17 +1,17 @@
-# Azure API Management - Multi-tenant Solutions
+# Azure API Management - Multi-tenant Solution
 
-This tutorial will illustrate the use of APIM to integrate with multiple integration in a multi-tenant scenarios. For example, having to pick the appropriate backend API based on the tenant customer id, or to validate the client request based on client certificate in mTLS authentication setup for multiple clients.
+This tutorial will illustrate the use of APIM integration in a multi-tenant scenarios. For example, having to pick the appropriate backend API based on the tenant customer id, or to validate the client request based on client certificate in mTLS authentication setup for multiple clients.
 
 ## Concepts 
 
 The following general concepts will be demonstrated:
 1. Use of [managed identities to authenticate API Management](https://learn.microsoft.com/en-us/azure/api-management/api-management-authentication-policies#ManagedIdentity) to other Azure Services (Azure Storage Table).
 1. Use of [send-request APIM policy](https://learn.microsoft.com/en-us/azure/api-management/api-management-advanced-policies#SendRequest).
-1. Use of internal cache with APIM and [caching policies](https://learn.microsoft.com/en-us/azure/api-management/api-management-caching-policies).
+1. Use of [internal cache with APIM](https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-cache) and [caching policies](https://learn.microsoft.com/en-us/azure/api-management/api-management-caching-policies).
 
 The components used to illustrate this solution are:
-1. Azure API Management
-1. Azure Storage Account (Table)
+1. [Azure API Management](https://learn.microsoft.com/en-us/azure/api-management/api-management-key-concepts)
+1. [Azure Storage Account (Table)](https://learn.microsoft.com/en-us/azure/storage/tables/table-storage-overview)
 
 ## Demo Diagram
 
@@ -27,11 +27,14 @@ In the above diagram the request flow is as follows:
 1. For this illustration we will simply display the tenant data.
 
 This concept can be expanded to connect with other configuration sources such as:
-1. Azure App Configuration Service.
-1. Azure Key Vault Service.
+1. [Azure App Configuration](https://learn.microsoft.com/en-us/azure/azure-app-configuration/overview) Service.
+1. [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview) Service.
 1. Other Azure Managed storage options, Cosmos DB, SQL Database etc.
 
 ## Policy Definition
+
+Below is the policy definition that accomplishes the desired outcome.
+>**Note**: The Time-to-live for cached entries is set to 120 seconds for this demo. This can be changed based on your scenario.
 
 ```xml
 <policies>
@@ -44,10 +47,11 @@ This concept can be expanded to connect with other configuration sources such as
         <!-- Look up internal cache for this tenant id (customer) -->
         <cache-lookup-value key="@("tenantdata-" + context.Variables["tenantid"])" variable-name="tenantdata" />
 
+        <!-- If the tenantdata context variable doesn’t exist, make an HTTP request to retrieve it from Table Storage.  -->
         <choose>
             <when condition="@(!context.Variables.ContainsKey("tenantdata"))">
 
-                <!-- If the tenantdata context variable doesn’t exist, make an HTTP request to retrieve it from Table Storage.  -->
+                <!-- Send request to the Table Storage -->
                 <send-request mode="new" response-variable-name="tenantdataresponse" timeout="20" ignore-error="false">
                     <set-url>@{
                             return String.Format("{0}(PartitionKey='1',RowKey='{1}')", context.Variables["storageTableUrl"], context.Variables["tenantid"]);
@@ -67,8 +71,9 @@ This concept can be expanded to connect with other configuration sources such as
 
                 <set-variable name="tenantdata" value="@(((IResponse)context.Variables["tenantdataresponse"]).Body.As<JObject>())" />
 
-                <!-- Store the response data to internal cache -->
+                <!-- Store the response data to internal cache. Cache TTL = 120 seconds. Only cache Ok 200 responses -->
                 <cache-store-value key="@("tenantdata-" + context.Variables["tenantid"])" value="@((JObject)context.Variables["tenantdata"])" duration="120" />
+
             </when>
         </choose>
         <!--
@@ -96,7 +101,9 @@ This concept can be expanded to connect with other configuration sources such as
 
 ```
 
-## Demo Setup
+## Demo Deployment
+
+### Infrastructure Setup
 
 Login to your Azure in your terminal.
 
@@ -113,6 +120,8 @@ az account show
 Run the deployment. The deployment will create the resource group "rg-\<Name suffix for resources\>". Make sure you are in the 'apim-multitenant' directory.
 
 ```bash
+git clone https://github.com/fsaleemm/apim-multitenant.git
+
 cd apim-multitenant
 
 az deployment sub create --name "<unique deployment name>" --location "<Your Chosen Location>" --template-file infra/main.bicep --parameters name="<Name suffix for resources>" publisherEmail="<Publisher Email for APIM>" publisherName="<Publisher Name for APIM>" 
@@ -123,5 +132,70 @@ The following deployments will run:
 ![deployment times](media/s2.png)
 
 >**NOTE**: The APIM deployment can take over an hour to complete.
+
+The deployment performs the following steps:
+1. Provisions API Management service.
+1. Provisions the Storage Account service.
+1. Creates a Table called TenantMapping in the Table Storage service.
+1. Creates the "Get Configuration Cached" API, the "Tenant data" API operation, and deploys the above policy.
+1. Assigns the Storage Table Data Reader role on the Storage Account service to the APIM Managed Identity.
+
+### Add Demo Data
+
+1. Add Tenant data to the TenantMapping storage table in Azure Portal using the Storage browser in the Storage Account created. Click Add entity. 
+    
+    ![](media/s3.png)
+
+1. Add Tenant data, see below for an example based on scenario discussed above. Add couple of tenant data entities.
+    >**Note**: Keep the PartitionKey = 1 for all entities for this demo to work.
+
+    ![](media/s4.png)
+
+    Sample Tenant data:
+    ![](media/s5.png)
+
+## Demo
+
+1. Go to the demo APIM instance in Azure Portal, go to APIs, and find "Get Configuration Cached" under All APIs that gets deployed. Select the "Tenant data" Operation. Click Test.
+    
+    ![](media/s6.png)
+
+1. In the API test interface, enter the following parameters and click Send:
+    
+    1. uid=tenantid1 
+    
+    1. storagetableurl=https://\<YOUR STORAGE ACCOUNT NAME\>.table.core.windows.net/TenantMapping
+
+    The Tenant 1 data should be in the response:
+
+    ![](media/s7.png)
+
+1. Try with uid=tenantid2, the response should be Tenant 2 data.
+
+    ![](media/s8.png)
+
+1. Use tracing to see the impact of APIM internal cache. Click Trace. (If you get a message to Enable tracing, then enable it). Click on Trace tab and see the response time:
+
+    ![](media/s9.png)
+
+    Look at the trace and you will see the response time is higher because of a cache miss:
+
+    ![](media/s10.png)
+
+1. Click Trace again and inspect the trace.
+
+    Compare the response time to previous request
+
+    ![](media/s11.png)
+
+    Look at the trace and you will see the cache hit:
+
+    ![](media/s12.png)
+
+>**Note**: The demo uses the developer tier of API Management and thus the absolute response times are not relevant, however, the relative difference in response times when using cache Vs no cache is important to note.
+
+## Disclaimer
+
+The code and deployment biceps are for demonstration purposes only.
 
 
