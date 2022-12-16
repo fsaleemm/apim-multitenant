@@ -1,4 +1,4 @@
-# Azure API Management - Multitenant Solutions
+# Azure API Management - Multi-tenant Solutions
 
 This tutorial will illustrate the use of APIM to integrate with multiple integration in a multi-tenant scenarios. For example, having to pick the appropriate backend API based on the tenant customer id, or to validate the client request based on client certificate in mTLS authentication setup for multiple clients.
 
@@ -113,7 +113,7 @@ az account show
 Run the deployment. The deployment will create the resource group "rg-\<Name suffix for resources\>". Make sure you are in the 'apim-multitenant' directory.
 
 ```bash
-cd app-templates-integration-services
+cd apim-multitenant
 
 az deployment sub create --name "<unique deployment name>" --location "<Your Chosen Location>" --template-file infra/main.bicep --parameters name="<Name suffix for resources>" publisherEmail="<Publisher Email for APIM>" publisherName="<Publisher Name for APIM>" 
 ```
