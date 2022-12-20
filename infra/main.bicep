@@ -22,7 +22,7 @@ resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   location: location
 }
 
-
+// Deploy APIM Instance
 module apim './modules/apim.bicep' = {
   name: '${rg.name}-apim'
   scope: rg
@@ -34,27 +34,7 @@ module apim './modules/apim.bicep' = {
   }
 }
 
-
-module storage './modules/storage.bicep' = {
-  name: '${rg.name}-storage'
-  scope: rg
-  params: {
-    location: rg.location
-  }
-}
-
-module configureStorageAccount './modules/configure/configure-storage.bicep' = {
-  name: '${rg.name}-configureStorageAccount'
-  scope: rg
-  params: {
-    storageAccountName: storage.outputs.storageAccountName
-  }
-  dependsOn: [
-    storage
-  ]
-}
-
-
+// Configure APIM instance with APIs and policies
 module configurAPIM './modules/configure/configure-apim.bicep' = {
   name: '${rg.name}-configureAPIM'
   scope: rg
@@ -66,15 +46,62 @@ module configurAPIM './modules/configure/configure-apim.bicep' = {
   ]
 }
 
-module roleAssignmentAPIMTableStorageDataReader './modules/configure/roleAssign-apim-storage.bicep' = {
-  name: '${rg.name}-roleAssignmentAPIMStorageAccout'
+
+// Deploy App Configuration instance
+module appconfig './modules/appconfig.bicep' = {
+  name: '${rg.name}-appconfig'
+  scope: rg
+  params: {
+    configStoreName: 'appconfig-${toLower(name)}'
+    location: rg.location
+  }
+}
+
+// Configure sample tenant data configurations
+module configurAppConfig './modules/configure/configure-appconfig.bicep' = {
+  name: '${rg.name}-configureAppConfig'
+  scope: rg
+  params: {
+    configStoreName: appconfig.outputs.appConfigServiceName
+  }
+  dependsOn: [
+    appconfig
+  ]
+}
+
+// Deploy Storage Account instance
+module storage './modules/storage.bicep' = {
+  name: '${rg.name}-storage'
+  scope: rg
+  params: {
+    location: rg.location
+  }
+}
+
+// Configure storage account with table storage for tenant data
+module configureStorageAccount './modules/configure/configure-storage.bicep' = {
+  name: '${rg.name}-configureStorageAccount'
+  scope: rg
+  params: {
+    storageAccountName: storage.outputs.storageAccountName
+  }
+  dependsOn: [
+    storage
+  ]
+}
+
+// Configure role assignment for APIM to read data from App Config and Table Storage
+module roleAssignmentAPIM './modules/configure/roleAssign-apim.bicep' = {
+  name: '${rg.name}-roleAssignmentAPIM'
   scope: rg
   params: {
     apimServiceName: apim.outputs.apimServiceName
     storageAccountName: storage.outputs.storageAccountName
+    configStoreName: appconfig.outputs.appConfigServiceName
   }
   dependsOn: [
     apim
     storage
+    appconfig
   ]
 }
