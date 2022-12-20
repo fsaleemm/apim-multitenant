@@ -56,7 +56,7 @@ resource operationPolicyStorage 'Microsoft.ApiManagement/service/apis/operations
         <set-variable name="tenantid" value="@(context.Request.Url.Query.GetValueOrDefault("uid", ""))" />
         <set-variable name="storageTableUrl" value="@(context.Request.Url.Query.GetValueOrDefault("storagetableurl", ""))" />
         <!-- Look up internal cache for this tenant id (customer) -->
-        <cache-lookup-value key="@("tenantdata-" + context.Variables["tenantid"])" variable-name="tenantdata" />
+        <cache-lookup-value key="@("tenantdata-st-" + context.Variables["tenantid"])" variable-name="tenantdata" />
         <choose>
             <when condition="@(!context.Variables.ContainsKey("tenantdata"))">
                 <!-- If the tenantdata context variable does not exist, make an HTTP request to retrieve it from Table Storage.  -->
@@ -76,7 +76,7 @@ resource operationPolicyStorage 'Microsoft.ApiManagement/service/apis/operations
                 </send-request>
                 <set-variable name="tenantdata" value="@(((IResponse)context.Variables["tenantdataresponse"]).Body.As<JObject>())" />
                 <!-- Store the response data to internal cache -->
-                <cache-store-value key="@("tenantdata-" + context.Variables["tenantid"])" value="@((JObject)context.Variables["tenantdata"])" duration="120" />
+                <cache-store-value key="@("tenantdata-st-" + context.Variables["tenantid"])" value="@((JObject)context.Variables["tenantdata"])" duration="120" />
             </when>
         </choose>
         <!--             
@@ -142,7 +142,7 @@ resource operationPolicyAppConfig 'Microsoft.ApiManagement/service/apis/operatio
         <set-variable name="tenantid" value="@(context.Request.Url.Query.GetValueOrDefault("uid", ""))" />
         <set-variable name="appConfigUrl" value="@(context.Request.Url.Query.GetValueOrDefault("appconfigurl", ""))" />
         <!-- Look up internal cache for this tenant id (customer) -->
-        <cache-lookup-value key="@("tenantdata-" + context.Variables["tenantid"])" variable-name="tenantdata" />
+        <cache-lookup-value key="@("tenantdata-ac-" + context.Variables["tenantid"])" variable-name="tenantdata" />
         <choose>
             <when condition="@(!context.Variables.ContainsKey("tenantdata"))">
                 <!-- If the tenantdata context variable does not exist, make an HTTP request to retrieve it from App Configuration.  -->
@@ -155,7 +155,7 @@ resource operationPolicyAppConfig 'Microsoft.ApiManagement/service/apis/operatio
                 </send-request>
                 <set-variable name="tenantdata" value="@(((IResponse)context.Variables["tenantdataresponse"]).Body.As<JObject>())" />
                 <!-- Store the response data to internal cache -->
-                <cache-store-value key="@("tenantdata-" + context.Variables["tenantid"])" value="@((JObject)context.Variables["tenantdata"])" duration="120" />
+                <cache-store-value key="@("tenantdata-ac-" + context.Variables["tenantid"])" value="@((JObject)context.Variables["tenantdata"])" duration="120" />
             </when>
         </choose>
         <!--

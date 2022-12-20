@@ -47,7 +47,7 @@ Below is the policy definition that accomplishes the desired outcome.
         <set-variable name="storageTableUrl" value="@(context.Request.Url.Query.GetValueOrDefault("storagetableurl", ""))" />
 
         <!-- Look up internal cache for this tenant id (customer) -->
-        <cache-lookup-value key="@("tenantdata-" + context.Variables["tenantid"])" variable-name="tenantdata" />
+        <cache-lookup-value key="@("tenantdata-st-" + context.Variables["tenantid"])" variable-name="tenantdata" />
 
         <!-- If the tenantdata context variable doesn’t exist, make an HTTP request to retrieve it from Table Storage.  -->
         <choose>
@@ -74,7 +74,7 @@ Below is the policy definition that accomplishes the desired outcome.
                 <set-variable name="tenantdata" value="@(((IResponse)context.Variables["tenantdataresponse"]).Body.As<JObject>())" />
 
                 <!-- Store the response data to internal cache. Cache TTL = 120 seconds. Only cache Ok 200 responses -->
-                <cache-store-value key="@("tenantdata-" + context.Variables["tenantid"])" value="@((JObject)context.Variables["tenantdata"])" duration="120" />
+                <cache-store-value key="@("tenantdata-st-" + context.Variables["tenantid"])" value="@((JObject)context.Variables["tenantdata"])" duration="120" />
 
             </when>
         </choose>
@@ -114,7 +114,7 @@ Below is the policy definition that accomplishes the desired outcome.
         <set-variable name="appConfigUrl" value="@(context.Request.Url.Query.GetValueOrDefault("appconfigurl", ""))" />
 
         <!-- Look up internal cache for this tenant id (customer) -->
-        <cache-lookup-value key="@("tenantdata-" + context.Variables["tenantid"])" variable-name="tenantdata" />
+        <cache-lookup-value key="@("tenantdata-ac-" + context.Variables["tenantid"])" variable-name="tenantdata" />
 
         <!-- If the tenantdata context variable does not exist, make an HTTP request to retrieve it from App Configuration.  -->
         <choose>
@@ -132,7 +132,7 @@ Below is the policy definition that accomplishes the desired outcome.
                 <set-variable name="tenantdata" value="@(((IResponse)context.Variables["tenantdataresponse"]).Body.As<JObject>())" />
 
                 <!-- Store the response data to internal cache -->
-                <cache-store-value key="@("tenantdata-" + context.Variables["tenantid"])" value="@((JObject)context.Variables["tenantdata"])" duration="120" />
+                <cache-store-value key="@("tenantdata-ac-" + context.Variables["tenantid"])" value="@((JObject)context.Variables["tenantdata"])" duration="120" />
             </when>
         </choose>
         <!--
@@ -219,7 +219,7 @@ The deployment performs the following steps:
 
 You can use either the "Get Tenant Data - Storage" or "Get Tenant Data - App Config" API operation to demonstrate the capability. Below are steps for using Storage Account.
 
-1. Go to the demo APIM instance in Azure Portal, go to APIs, and find "Get Configuration Cached" under All APIs that gets deployed. Select the "Tenant data" Operation. Click Test.
+1. Go to the demo APIM instance in Azure Portal, go to APIs, and find "Multi-tenant Configurations" API under All APIs that gets deployed. Select the "Get Tenant Data - Storage" or "Get Tenant Data - App Config" Operation. Click Test.
     
     ![](media/s6.png)
 
@@ -227,7 +227,9 @@ You can use either the "Get Tenant Data - Storage" or "Get Tenant Data - App Con
     
     1. uid=tenantid1 
     
-    1. storagetableurl=https://\<YOUR STORAGE ACCOUNT NAME\>.table.core.windows.net/TenantMapping
+    1. If using Storage Operation, then storagetableurl=https://\<YOUR STORAGE ACCOUNT NAME\>.table.core.windows.net/TenantMapping
+
+    1. If using App Config Operation, then appconfigurl=https://\<YOUR APP CONFIGURATION NAME\>.azconfig.io
 
     The Tenant 1 data should be in the response:
 
