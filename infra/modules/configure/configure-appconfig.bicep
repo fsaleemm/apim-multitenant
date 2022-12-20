@@ -14,7 +14,7 @@ resource Tenant1 'Microsoft.AppConfiguration/configurationStores/keyValues@2021-
       "TenantCertThumbprint": "78E1BE82F683EE6D8CB9B9266FC1185AE0890C41",
       "TenantCertSubject": "C=US, ST=Illinois, L=Chicago, O=TenantOne Corp., CN=*.tenant1.com",
       "BackendUrl": "https://tenant1.backend"
-    }'''
+}'''
     contentType: 'application/json'
   }
 }
@@ -28,7 +28,7 @@ resource Tenant2 'Microsoft.AppConfiguration/configurationStores/keyValues@2021-
       "TenantCertThumbprint": "78E1BE82F683EE6D8CB9B9266FC1185AE0890C42",
       "TenantCertSubject": "C=US, ST=Illinois, L=Chicago, O=TenantTwo Corp., CN=*.tenant2.com",
       "BackendUrl": "https://tenant2.backend"
-    }'''
+}'''
     contentType: 'application/json'
   }
 }
