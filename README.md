@@ -16,7 +16,7 @@ The components used to illustrate this solution are:
 
 ## Demo Concept Diagram
 
-![Conceptual View](/media/s1.png)
+![Conceptual View](/media/s1-1.png)
 
 In the above diagram the request flow is as follows:
 1. A request from a specific tenant (Tenant 1) is received by APIM
