@@ -20,7 +20,7 @@ The components used to illustrate this solution are:
 
 In the above diagram the request flow is as follows:
 1. A request from a specific tenant (Tenant 1) is received by APIM
-1. The APIM policy is configured to do the following:
+1. The APIM policies are configured to do the following:
     1. Check the internal cache for tenant data.
     1. If there is a cache miss, go to table storage or app configuration and get tenant data.
     1. Cache the tenant data for subsequent requests.
@@ -31,12 +31,68 @@ This concept can be expanded to connect with other configuration sources such as
 1. [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview) Service.
 1. Other Azure Managed storage options, Cosmos DB, SQL Database etc.
 
-## Policy Definition
+## Policirs Definition
 
-Below is the policy definition that accomplishes the desired outcome.
+Below are the policies definition that accomplishes the desired outcome.
 >**Note**: The Time-to-live for cached entries is set to 120 seconds for this demo. This can be changed based on your scenario.
 
-### Policy Definition for using Storage Account
+### Policies Definition for using App Configuration
+
+```xml
+<policies>
+    <inbound>
+        <base />
+        <!-- Get the query parameters and create variable context -->
+        <set-variable name="tenantid" value="@(context.Request.Url.Query.GetValueOrDefault("uid", ""))" />
+        <set-variable name="appConfigUrl" value="@(context.Request.Url.Query.GetValueOrDefault("appconfigurl", ""))" />
+
+        <!-- Look up internal cache for this tenant id (customer) -->
+        <cache-lookup-value key="@("tenantdata-ac-" + context.Variables["tenantid"])" variable-name="tenantdata" />
+
+        <!-- If the tenantdata context variable does not exist, make an HTTP request to retrieve it from App Configuration.  -->
+        <choose>
+            <when condition="@(!context.Variables.ContainsKey("tenantdata"))">
+                
+                <!-- Send request to App Configuration -->
+                <send-request mode="new" response-variable-name="tenantdataresponse" timeout="20" ignore-error="false">
+                    <set-url>@{
+                            return String.Format("{0}/kv/{1}?api-version=1.0", context.Variables["appConfigUrl"], context.Variables["tenantid"]);
+                        }</set-url>
+                    <set-method>GET</set-method>
+                    <authentication-managed-identity resource="https://azconfig.io" />
+                </send-request>
+
+                <set-variable name="tenantdata" value="@(((IResponse)context.Variables["tenantdataresponse"]).Body.As<JObject>())" />
+
+                <!-- Store the response data to internal cache. Cache TTL = 120 seconds. Only cache Ok 200 responses -->
+                <cache-store-value key="@("tenantdata-ac-" + context.Variables["tenantid"])" value="@((JObject)context.Variables["tenantdata"])" duration="120" />
+            </when>
+        </choose>
+        <!--
+            Continue with request, for example:
+                Add validate-client-certificate policy and use the thumbprint for validation.
+                If certificate is valid, then use the backend url to send request to appropriate backend for this tenant.
+            
+            For this tutorial purposes, we are just displaying the tenant data in the response.
+        -->
+        <return-response>
+            <set-status code="200" />
+            <set-body template="none">@(((JObject)context.Variables["tenantdata"])["value"].ToString())</set-body>
+        </return-response>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>
+```
+
+### Policies Definition for using Storage Account
 
 ```xml
 <policies>
@@ -101,62 +157,6 @@ Below is the policy definition that accomplishes the desired outcome.
     </on-error>
 </policies>
 
-```
-
-### Policy Definition for using App Configuration
-
-```xml
-<policies>
-    <inbound>
-        <base />
-        <!-- Get the query parameters and create variable context -->
-        <set-variable name="tenantid" value="@(context.Request.Url.Query.GetValueOrDefault("uid", ""))" />
-        <set-variable name="appConfigUrl" value="@(context.Request.Url.Query.GetValueOrDefault("appconfigurl", ""))" />
-
-        <!-- Look up internal cache for this tenant id (customer) -->
-        <cache-lookup-value key="@("tenantdata-ac-" + context.Variables["tenantid"])" variable-name="tenantdata" />
-
-        <!-- If the tenantdata context variable does not exist, make an HTTP request to retrieve it from App Configuration.  -->
-        <choose>
-            <when condition="@(!context.Variables.ContainsKey("tenantdata"))">
-                
-                <!-- Send request to App Configuration -->
-                <send-request mode="new" response-variable-name="tenantdataresponse" timeout="20" ignore-error="false">
-                    <set-url>@{
-                            return String.Format("{0}/kv/{1}?api-version=1.0", context.Variables["appConfigUrl"], context.Variables["tenantid"]);
-                        }</set-url>
-                    <set-method>GET</set-method>
-                    <authentication-managed-identity resource="https://azconfig.io" />
-                </send-request>
-
-                <set-variable name="tenantdata" value="@(((IResponse)context.Variables["tenantdataresponse"]).Body.As<JObject>())" />
-
-                <!-- Store the response data to internal cache -->
-                <cache-store-value key="@("tenantdata-ac-" + context.Variables["tenantid"])" value="@((JObject)context.Variables["tenantdata"])" duration="120" />
-            </when>
-        </choose>
-        <!--
-            Continue with request, for example:
-                Add validate-client-certificate policy and use the thumbprint for validation.
-                If certificate is valid, then use the backend url to send request to appropriate backend for this tenant.
-            
-            For this tutorial purposes, we are just displaying the tenant data in the response.
-        -->
-        <return-response>
-            <set-status code="200" />
-            <set-body template="none">@(((JObject)context.Variables["tenantdata"])["value"].ToString())</set-body>
-        </return-response>
-    </inbound>
-    <backend>
-        <base />
-    </backend>
-    <outbound>
-        <base />
-    </outbound>
-    <on-error>
-        <base />
-    </on-error>
-</policies>
 ```
 
 ## Demo Deployment
