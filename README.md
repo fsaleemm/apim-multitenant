@@ -13,6 +13,7 @@ The components used to illustrate this solution are:
 1. [Azure API Management](https://learn.microsoft.com/en-us/azure/api-management/api-management-key-concepts)
 1. [App Configuration](https://learn.microsoft.com/en-us/azure/azure-app-configuration/overview)
 1. [Azure Storage Account (Table)](https://learn.microsoft.com/en-us/azure/storage/tables/table-storage-overview)
+1. [Azure Cache for Redis](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/cache-overview) external cache option.
 
 ## Architecture
 
