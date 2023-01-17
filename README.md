@@ -202,7 +202,7 @@ The deployment performs the following steps:
 1. Assigns the Storage Table Data Reader role on the Storage Account service to the APIM Managed Identity.
 1. Assigns the App Configuration Data Reader role on the App Configuration service to the APIM Managed Identity.
 
-### Add Demo Data (Only for Storage example)
+### Add Demo Data (If using Azure Storage Table for storing mappings)
 
 1. Add Tenant data to the TenantMapping storage table in Azure Portal using the Storage browser in the Storage Account created. Click Add entity. 
     
