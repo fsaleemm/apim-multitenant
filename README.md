@@ -1,6 +1,6 @@
 # Azure API Management - Multi-tenant Solution
 
-This tutorial will illustrate the use of APIM integration in multi-tenant scenarios. For example, having to pick the appropriate backend API based on the tenant customer id, or to validate the client request based on client certificate in mTLS authentication setup for multiple clients.
+This tutorial will illustrate the use of APIM in multi-tenant scenarios. In multi-tenant solutions, there is a need to [map requests to tenants](https://learn.microsoft.com/en-us/azure/architecture/guide/multitenant/considerations/map-requests). Other examples are having to pick the appropriate backend API based on the tenant customer id, or to validate the client request based on client certificate in mTLS authentication setup.
 
 ## Concepts 
 
@@ -263,5 +263,6 @@ You can use either the "Get Tenant Data - Storage" or "Get Tenant Data - App Con
 ## Disclaimer
 
 The code and deployment biceps are for demonstration purposes only.
+
 
 
