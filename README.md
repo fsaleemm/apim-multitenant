@@ -1,6 +1,6 @@
 # Azure API Management - Multi-tenant Solution
 
-This tutorial will illustrate the use of APIM integration in a multi-tenant scenarios. For example, having to pick the appropriate backend API based on the tenant customer id, or to validate the client request based on client certificate in mTLS authentication setup for multiple clients.
+This tutorial will illustrate the use of APIM in multi-tenant scenarios. In multi-tenant solutions, there is a need to [map requests to tenants](https://learn.microsoft.com/en-us/azure/architecture/guide/multitenant/considerations/map-requests). Other examples are having to pick the appropriate backend API based on the tenant customer id, or to validate the client request based on client certificate in mTLS authentication setup.
 
 ## Concepts 
 
@@ -13,15 +13,16 @@ The components used to illustrate this solution are:
 1. [Azure API Management](https://learn.microsoft.com/en-us/azure/api-management/api-management-key-concepts)
 1. [App Configuration](https://learn.microsoft.com/en-us/azure/azure-app-configuration/overview)
 1. [Azure Storage Account (Table)](https://learn.microsoft.com/en-us/azure/storage/tables/table-storage-overview)
+1. [Azure Cache for Redis](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/cache-overview) external cache option.
 
-## Demo Concept Diagram
+## Architecture
 
-![Conceptual View](/media/s1-1.png)
+![Conceptual View](/media/s1-2.png)
 
 In the above diagram the request flow is as follows:
 1. A request from a specific tenant (Tenant 1) is received by APIM
 1. The APIM policies are configured to do the following:
-    1. Check the internal cache for tenant data.
+    1. Check the internal or external ([Cache for Redis](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/cache-overview)) cache for tenant data.
     1. If there is a cache miss, go to table storage or app configuration and get tenant data.
     1. Cache the tenant data for subsequent requests.
     1. Process the request, for example, a tenant specific backend API can be used to forward the request. Or to validate the client request using [validate-client-certificate policy](https://learn.microsoft.com/en-us/azure/api-management/api-management-access-restriction-policies#validate-client-certificate) and validate the client certificate.
@@ -31,9 +32,9 @@ This concept can be expanded to connect with other configuration sources such as
 1. [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview) Service.
 1. Other Azure Managed storage options, Cosmos DB, SQL Database etc.
 
-## Policirs Definition
+## Policies Definition
 
-Below are the policies definition that accomplishes the desired outcome.
+Below are the policies definition that accomplishes the desired outcome using internal cache. Follow steps in the [use an external cache](https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-cache-external) guide to setup an external cache with API Management.  
 >**Note**: The Time-to-live for cached entries is set to 120 seconds for this demo. This can be changed based on your scenario.
 
 ### Policies Definition for using App Configuration
@@ -201,13 +202,13 @@ The deployment performs the following steps:
 1. Assigns the Storage Table Data Reader role on the Storage Account service to the APIM Managed Identity.
 1. Assigns the App Configuration Data Reader role on the App Configuration service to the APIM Managed Identity.
 
-### Add Demo Data (Only for Storage example)
+### Add Demo Data (If using Azure Storage Table to store mappings)
 
 1. Add Tenant data to the TenantMapping storage table in Azure Portal using the Storage browser in the Storage Account created. Click Add entity. 
     
     ![](media/s3.png)
 
-1. Add Tenant data, see below for an example based on scenario discussed above. Add couple of tenant data entities.
+1. Add Tenant data, see below for an example based on scenario discussed above. Add a couple of tenant data entities.
     >**Note**: Keep the PartitionKey = 1 for all entities for this demo to work.
 
     ![](media/s4.png)
@@ -219,7 +220,7 @@ The deployment performs the following steps:
 
 You can use either the "Get Tenant Data - Storage" or "Get Tenant Data - App Config" API operation to demonstrate the capability. Below are steps for using Storage Account.
 
-1. Go to the demo APIM instance in Azure Portal, go to APIs, and find "Multi-tenant Configurations" API under All APIs that gets deployed. Select the "Get Tenant Data - Storage" or "Get Tenant Data - App Config" Operation. Click Test.
+1. Go to the demo APIM instance in Azure Portal, go to APIs, and find "Multi-tenant Configurations" API under All APIs that get deployed. Select the "Get Tenant Data - Storage" or "Get Tenant Data - App Config" Operation. Click Test.
     
     ![](media/s6.png)
 
@@ -249,7 +250,7 @@ You can use either the "Get Tenant Data - Storage" or "Get Tenant Data - App Con
 
 1. Click Trace again and inspect the trace.
 
-    Compare the response time to previous request
+    Compare the response time to previous request.
 
     ![](media/s11.png)
 
@@ -262,3 +263,6 @@ You can use either the "Get Tenant Data - Storage" or "Get Tenant Data - App Con
 ## Disclaimer
 
 The code and deployment biceps are for demonstration purposes only.
+
+
+
